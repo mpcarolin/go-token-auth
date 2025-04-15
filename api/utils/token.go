@@ -12,7 +12,7 @@ var hmacSecretKey = []byte(secretKey)
 var signingMethod = jwt.SigningMethodHS256
 
 func GenerateToken(username string) (string, error) {
-	expirationTime := time.Now().Add(time.Hour * 24)
+	expirationTime := time.Now().Add(time.Hour * 24).Unix()
 	currentTime := time.Now().Unix()
 	notBefore := time.Now().Add(time.Millisecond * 100).Unix()
 	token := jwt.NewWithClaims(signingMethod, jwt.MapClaims{

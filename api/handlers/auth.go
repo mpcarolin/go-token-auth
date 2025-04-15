@@ -64,13 +64,13 @@ func ValidateRequest(c echo.Context) error {
 	cookie, cookieErr := c.Cookie("token");
 	if cookieErr != nil {
 		slog.Error("issue retrieving token", "error", cookieErr)
-		return c.String(http.StatusUnauthorized, "unauthorized")
+		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
 	}
 
 	_, err := utils.ValidateToken(cookie.Value);
 	if err != nil {
 		slog.Error("issue validating token", "error", err)
-		return c.String(http.StatusUnauthorized, "unauthorized")
+		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
 	}
 
 	return nil;
@@ -124,17 +124,20 @@ func Register(c echo.Context) error {
 }
 
 func GetUser(c echo.Context) error {
-	err := ValidateRequest(c);
+	slog.Info("getting user", "username", c.Param("username"))
+	err := ValidateRequest(c)
 	if err != nil {
-		slog.Error("issue validating request", "error", err)
-		return err;
+		return err
 	}
+	
+	slog.Info("request validated", "username", c.Param("username"))
 	username := c.Param("username")
 	user, ok := users[username]
 	if !ok {
 		slog.Error("user not found", "username", username)
-		return c.String(http.StatusNotFound, "user not found")
+		return echo.NewHTTPError(http.StatusNotFound, "user not found")
 	}
+	slog.Info("user found", "username", username)
 	return c.JSON(http.StatusOK, user)
 }
 
