@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"api/models"
+	"api/utils"
 
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -24,7 +25,7 @@ func Login(c echo.Context) error {
 	}
 	if _, ok := users[username]; !ok {
 		slog.Error("user not found", "username", username)
-		return c.String(http.StatusNotFound, "user not found. please register first.")
+		return c.String(http.StatusInternalServerError, "bad credentials")
 	}
 
 	user := users[username]
@@ -35,9 +36,47 @@ func Login(c echo.Context) error {
 		return c.String(http.StatusUnauthorized, "invalid username or password")
 	}
 
+	token, err := utils.GenerateToken(username);
+	if err != nil {
+		slog.Error("failed to generate token", "error", err)
+		return c.String(http.StatusInternalServerError, "internal error")
+	}
+
+	// TODO: get expiration for cookie to be aligned with token expiration
+	c.SetCookie(GenerateCookie(token));
 	return c.String(http.StatusOK, "user logged in")
 }
 
+func GenerateCookie(token string) *http.Cookie {
+	cookie := http.Cookie {
+		Name: "token",
+		Value: token,
+		Path: "/",
+		MaxAge: 86400,
+		HttpOnly: true,
+		Secure: true,
+		SameSite: http.SameSiteDefaultMode,
+	}
+	return &cookie;
+}
+
+func ValidateRequest(c echo.Context) error {
+	cookie, cookieErr := c.Cookie("token");
+	if cookieErr != nil {
+		slog.Error("issue retrieving token", "error", cookieErr)
+		return c.String(http.StatusUnauthorized, "unauthorized")
+	}
+
+	_, err := utils.ValidateToken(cookie.Value);
+	if err != nil {
+		slog.Error("issue validating token", "error", err)
+		return c.String(http.StatusUnauthorized, "unauthorized")
+	}
+
+	return nil;
+}
+
+// TODO: seems like a bad func, maybe rethink. Or at least badly named.
 func validateLogin(c echo.Context, username string, password string) error {
 	if username == "" || password == "" {
 		return c.String(http.StatusBadRequest, "username and password are required")
@@ -83,6 +122,22 @@ func Register(c echo.Context) error {
 
 	return c.String(http.StatusOK, "user registered")
 }
+
+func GetUser(c echo.Context) error {
+	err := ValidateRequest(c);
+	if err != nil {
+		slog.Error("issue validating request", "error", err)
+		return err;
+	}
+	username := c.Param("username")
+	user, ok := users[username]
+	if !ok {
+		slog.Error("user not found", "username", username)
+		return c.String(http.StatusNotFound, "user not found")
+	}
+	return c.JSON(http.StatusOK, user)
+}
+
 
 func saveUser(user models.User) error {
 	users[user.Username] = user
