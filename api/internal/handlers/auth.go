@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"api/models"
-	"api/utils"
+	"api/internal/models"
+	"api/internal/utils"
 
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"

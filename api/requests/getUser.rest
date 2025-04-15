@@ -1,0 +1,2 @@
+GET http://localhost:8080/user/testuser
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDQ4Mjk2MjgsImlhdCI6MTc0NDc0MzIyOCwibmJmIjoxNzQ0NzQzMjI4LCJ1c2VybmFtZSI6InRlc3R1c2VyIn0.5aQOxVla2GH72LVOL9FiTe0V3mCxwu29-m0fwjdh2Lw; Path=/; Max-Age=86400; HttpOnly; Secure

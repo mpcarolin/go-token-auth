@@ -1,21 +1,26 @@
 package main
 
 import (
-	// "log"
 	"errors"
 	"log/slog"
 	"net/http"
 	"time"
 
-	"api/handlers"
+	"api/internal/constants/env"
+	"api/internal/handlers"
+	"api/internal/utils"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
+
 func main() {
 	// Echo instance
 	e := echo.New()
+
+	// Set debug mode based on environment
+	e.Debug = utils.GetEnv() == env.Development
 
 	// Middleware
 	e.Use(middleware.Logger())
@@ -34,5 +39,7 @@ func main() {
 	// Start server
 	if err := e.Start(":8080"); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("failed to start server!", "error", err)
+	} else {
+		slog.Info("server started on port 8080")
 	}
 }
