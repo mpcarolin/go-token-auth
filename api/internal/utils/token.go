@@ -11,6 +11,7 @@ var hmacSecretKey = []byte(secretKey)
 
 var signingMethod = jwt.SigningMethodHS256
 
+// Generates a JWT for a given username
 func GenerateToken(username string) (string, error) {
 	expirationTime := time.Now().Add(time.Hour * 24).Unix()
 	currentTime := time.Now().Unix()
@@ -25,6 +26,7 @@ func GenerateToken(username string) (string, error) {
 	return token.SignedString([]byte(secretKey))
 }
 
+// Parses and validates a JWT string, returning the token if valid, else an error
 func ValidateToken(tokenString string) (*jwt.Token, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return hmacSecretKey, nil

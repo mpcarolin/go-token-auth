@@ -13,6 +13,7 @@ import (
 
 var users = map[string]models.User{} // username:hashedPassword
 
+// Route handler for logging in a user, given form values username and password
 func Login(c echo.Context) error {
 	username := c.FormValue("username")
 	password := c.FormValue("password")	
@@ -60,22 +61,6 @@ func GenerateCookie(token string) *http.Cookie {
 	return &cookie;
 }
 
-func ValidateRequest(c echo.Context) error {
-	cookie, cookieErr := c.Cookie("token");
-	if cookieErr != nil {
-		slog.Error("issue retrieving token", "error", cookieErr)
-		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
-	}
-
-	_, err := utils.ValidateToken(cookie.Value);
-	if err != nil {
-		slog.Error("issue validating token", "error", err)
-		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
-	}
-
-	return nil;
-}
-
 // TODO: seems like a bad func, maybe rethink. Or at least badly named.
 func validateLogin(c echo.Context, username string, password string) error {
 	if username == "" || password == "" {
@@ -87,6 +72,7 @@ func validateLogin(c echo.Context, username string, password string) error {
 	return nil;
 }
 
+// Route handler for registering a user, given form values username and password
 func Register(c echo.Context) error {
 	username := c.FormValue("username")
 	password := c.FormValue("password")
@@ -124,13 +110,6 @@ func Register(c echo.Context) error {
 }
 
 func GetUser(c echo.Context) error {
-	slog.Info("getting user", "username", c.Param("username"))
-	err := ValidateRequest(c)
-	if err != nil {
-		return err
-	}
-	
-	slog.Info("request validated", "username", c.Param("username"))
 	username := c.Param("username")
 	user, ok := users[username]
 	if !ok {

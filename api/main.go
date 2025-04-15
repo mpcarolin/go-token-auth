@@ -8,10 +8,11 @@ import (
 
 	"api/internal/constants/env"
 	"api/internal/handlers"
+	"api/internal/middleware"
 	"api/internal/utils"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	emiddleware "github.com/labstack/echo/v4/middleware"
 )
 
 
@@ -23,8 +24,8 @@ func main() {
 	e.Debug = utils.GetEnv() == env.Development
 
 	// Middleware
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+	e.Use(emiddleware.Logger())
+	e.Use(emiddleware.Recover())
 
 	// Routes
 	e.GET("/status", func(c echo.Context) error {
@@ -34,7 +35,7 @@ func main() {
 
 	e.POST("/register", handlers.Register)
 	e.POST("/login", handlers.Login)
-	e.GET("/user/:username", handlers.GetUser)
+	e.GET("/user/:username", middleware.Authenticate(handlers.GetUser));
 
 	// Start server
 	if err := e.Start(":8080"); err != nil && !errors.Is(err, http.ErrServerClosed) {
