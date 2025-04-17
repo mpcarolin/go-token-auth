@@ -100,7 +100,7 @@ func Register(c echo.Context) error {
 		HashedPassword: string(hashed),
 	}
 
-	saveErr := saveUser(user);
+	saveErr := SaveUser(user);
 	if saveErr != nil {
 		slog.Error("failed to save user", "error", saveErr)
 		return c.String(http.StatusInternalServerError, "failed to register user")
@@ -108,20 +108,3 @@ func Register(c echo.Context) error {
 
 	return c.String(http.StatusOK, "user registered")
 }
-
-func GetUser(c echo.Context) error {
-	username := c.Param("username")
-	user, ok := users[username]
-	if !ok {
-		slog.Error("user not found", "username", username)
-		return echo.NewHTTPError(http.StatusNotFound, "user not found")
-	}
-	slog.Info("user found", "username", username)
-	return c.JSON(http.StatusOK, user)
-}
-
-
-func saveUser(user models.User) error {
-	users[user.Username] = user
-	return nil
-} 

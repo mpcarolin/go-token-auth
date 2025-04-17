@@ -1,0 +1,2 @@
+GET http://localhost:8080/users
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDQ5NTA1NjEsImlhdCI6MTc0NDg2NDE2MSwibmJmIjoxNzQ0ODY0MTYyLCJ1c2VybmFtZSI6InRlc3R1c2VyIn0.BLfdGDuIInr8d6yolF_xu6BAEn-UkrPtFOqCACLcjQk; Path=/; Max-Age=86400; HttpOnly; Secure
