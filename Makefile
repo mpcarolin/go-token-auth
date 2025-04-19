@@ -6,3 +6,8 @@ dbreset:
 
 dev:
 	docker compose watch
+
+test:
+	$(MAKE) dbreset
+	cd ./api && go test -v
+	docker compose down
