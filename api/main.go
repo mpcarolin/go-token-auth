@@ -4,13 +4,11 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"api/internal/constants/env"
 	"api/internal/handlers"
 	"api/internal/middleware"
-	"api/internal/models"
 	"api/internal/utils"
 
 	"github.com/labstack/echo/v4"
@@ -25,36 +23,11 @@ func main() {
 	e.Debug = utils.GetEnv() != env.Production
 
 	// Middleware
-	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			db, err := utils.InitDb()
-			if err != nil {
-				os.Exit(1)
-			}
-			appCtx := &models.AppContext{
-				Context: c,
-				AppDB:   db,
-			}
-			return next(appCtx)
-		}
-	})
-
-	// Middleware which runs *after* all others, to
-	// ensure connections are closed
-	// HOWEVER TODO: we need to make this persist across connections
-	// for latency
-	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			cc := c.(*models.AppContext)
-			err := next(cc)
-			slog.Info("Closing DB connection!!!")
-			cc.AppDB.Close()
-			return err
-		}
-	})
-
+	e.Use(middleware.SetupCtx)
+	e.Use(middleware.Cleanup)
 	e.Use(echoMiddleware.Logger())
 	e.Use(echoMiddleware.Recover())
+	e.Use(echoMiddleware.RateLimiter(echoMiddleware.NewRateLimiterMemoryStore(20)))
 
 	// Routes
 	e.GET("/status", func(c echo.Context) error {
@@ -65,10 +38,14 @@ func main() {
 	e.POST("/register", handlers.Register)
 	e.POST("/login", handlers.Login)
 
-	// using this for testing, in real app would never expose this endpoint
+	// using this for testing, in real app probably would not expose this endpoint
 	e.GET("/users", middleware.Authenticate(handlers.GetUsers))
 
-	// Start server
+	start(e);
+}
+
+// start echo server listening on port
+func start (e *echo.Echo) {
 	if err := e.Start(":8080"); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("failed to start server!", "error", err)
 	} else {

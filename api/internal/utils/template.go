@@ -5,7 +5,8 @@ import (
 	"text/template"
 )
 
-func Template(tmplStr string, data map[string]interface{}) (string, error) {
+// just a helper function to ease substituting values in a template string
+func Template(tmplStr string, data map[string]any) (string, error) {
 	var output bytes.Buffer;
 
 	tmpl := template.Must(template.New("parsed").Parse(tmplStr));
