@@ -27,13 +27,13 @@ func main() {
 	// Middleware
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			db, err := utils.InitDb();
-			if (err != nil) {
-				os.Exit(1);
+			db, err := utils.InitDb()
+			if err != nil {
+				os.Exit(1)
 			}
 			appCtx := &models.AppContext{
 				Context: c,
-				AppDB: db,
+				AppDB:   db,
 			}
 			return next(appCtx)
 		}
@@ -48,7 +48,7 @@ func main() {
 			cc := c.(*models.AppContext)
 			err := next(cc)
 			slog.Info("Closing DB connection!!!")
-			cc.AppDB.Close();
+			cc.AppDB.Close()
 			return err
 		}
 	})
@@ -58,15 +58,15 @@ func main() {
 
 	// Routes
 	e.GET("/status", func(c echo.Context) error {
-		response := "OK "+time.Now().Format("2006-01-02 15:04:05")
+		response := "OK " + time.Now().Format("2006-01-02 15:04:05")
 		return c.String(http.StatusOK, response)
 	})
 
 	e.POST("/register", handlers.Register)
 	e.POST("/login", handlers.Login)
-	e.GET("/users/:username", middleware.Authenticate(handlers.GetUser));
-	// e.GET("/users", middleware.Authenticate(handlers.GetUsers));
-	e.GET("/users", handlers.GetUsers);
+
+	// using this for testing, in real app would never expose this endpoint
+	e.GET("/users", middleware.Authenticate(handlers.GetUsers))
 
 	// Start server
 	if err := e.Start(":8080"); err != nil && !errors.Is(err, http.ErrServerClosed) {

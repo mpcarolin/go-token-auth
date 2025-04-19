@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"api/internal/db"
 	"api/internal/models"
 	"api/internal/utils"
 
@@ -11,96 +12,87 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var users = map[string]models.User{} // username:hashedPassword
-
 // Route handler for logging in a user, given form values username and password
 func Login(c echo.Context) error {
-	username := c.FormValue("username")
-	password := c.FormValue("password")	
-	slog.Info("attempting to login user", "username", username)
+	cc := c.(*models.AppContext)
 
-	validateErr := validateLogin(c, username, password);
+	// fill loginParams with data from body
+	var loginParams db.CreateUserParams
+	bindErr := cc.Bind(&loginParams)
+	if bindErr != nil {
+		slog.Error("failed to bind params from body", "error", bindErr)
+		return cc.String(http.StatusBadRequest, "valid user params in body are required");
+	}
+
+	validateErr := utils.ValidateLogin(loginParams.Email, loginParams.Password);
 	if validateErr != nil {
-		slog.Error("invalid username or password", "error", validateErr)
-		return validateErr;
-	}
-	if _, ok := users[username]; !ok {
-		slog.Error("user not found", "username", username)
-		return c.String(http.StatusInternalServerError, "bad credentials")
+		slog.Error("Error validating the input for registration.", "error", validateErr)
+		return validateErr
 	}
 
-	user := users[username]
+	user, userErr := GetUser(c, loginParams.Email);
+	if userErr != nil {
+		slog.Error("issue finding user at login by credentials", "error", userErr)
+		return cc.String(http.StatusInternalServerError, "bad credentials")
+	}
 
-	err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password));
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginParams.Password))
 	if err != nil {
 		slog.Error("invalid username or password", "error", err)
 		return c.String(http.StatusUnauthorized, "invalid username or password")
 	}
 
-	token, err := utils.GenerateToken(username);
+	token, err := utils.GenerateToken(user.Email)
 	if err != nil {
 		slog.Error("failed to generate token", "error", err)
 		return c.String(http.StatusInternalServerError, "internal error")
 	}
 
 	// TODO: get expiration for cookie to be aligned with token expiration
-	c.SetCookie(GenerateCookie(token));
+	c.SetCookie(utils.GenerateCookie(token))
 	return c.String(http.StatusOK, "user logged in")
 }
 
-func GenerateCookie(token string) *http.Cookie {
-	cookie := http.Cookie {
-		Name: "token",
-		Value: token,
-		Path: "/",
-		MaxAge: 86400,
-		HttpOnly: true,
-		Secure: true,
-		SameSite: http.SameSiteDefaultMode,
-	}
-	return &cookie;
-}
 
-// TODO: seems like a bad func, maybe rethink. Or at least badly named.
-func validateLogin(c echo.Context, username string, password string) error {
-	if username == "" || password == "" {
-		return c.String(http.StatusBadRequest, "username and password are required")
-	}
-	if len(password) > 72 { // bcrypt max byte size if 72
-		return c.String(http.StatusBadRequest, "password is too long")
-	}
-	return nil;
-}
 
 // Route handler for registering a user, given form values username and password
 func Register(c echo.Context) error {
-	username := c.FormValue("username")
-	password := c.FormValue("password")
-	slog.Info("registering user", "username", username)
+	cc := c.(*models.AppContext)
 
-	validateErr := validateLogin(c, username, password);
+	// fill userParams with data from body
+	var userParams db.CreateUserParams
+	bindErr := cc.Bind(&userParams)
+	if bindErr != nil {
+		slog.Error("failed to bind params from body", "error", bindErr)
+		return cc.String(http.StatusBadRequest, "valid user params in body are required");
+	}
+
+	validateErr := utils.ValidateLogin(userParams.Email, userParams.Password);
 	if validateErr != nil {
-		slog.Error("invalid username or password", "error", validateErr)
+		slog.Error("Error validating the input for registration.", "error", validateErr)
 		return validateErr
 	}
 
-	if _, ok := users[username]; ok {
-		slog.Error("username already exists", "username", username)
-		return c.String(http.StatusConflict, "username already exists")
+	exists, existErr := UserExists(c, userParams.Email);
+	if existErr != nil {
+		slog.Error("Error checking existence of user", "error", bindErr)
+		return cc.String(http.StatusInternalServerError, "Issue encountered while trying to register user");
+	}
+	if exists {
+		slog.Error("user with that email already exists", "username", userParams.Email)
+		return c.String(http.StatusConflict, "email in use")
 	}
 
-	var hashed, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+	var hashed, err = bcrypt.GenerateFromPassword([]byte(userParams.Password), bcrypt.MinCost)
 	if err != nil {
 		slog.Error("failed to hash password", "error", err)
 		return c.String(http.StatusInternalServerError, "invalid password")
 	}
 
-	user := models.User{
-		Username: username,
-		HashedPassword: string(hashed),
-	}
-
-	saveErr := SaveUser(user);
+	_, saveErr := SaveUser(c, db.CreateUserParams{
+		Email: userParams.Email,
+		Password: string(hashed),
+	})
 	if saveErr != nil {
 		slog.Error("failed to save user", "error", saveErr)
 		return c.String(http.StatusInternalServerError, "failed to register user")

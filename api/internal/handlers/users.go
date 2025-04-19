@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"api/internal/db"
 	"api/internal/models"
 	"context"
 	"log/slog"
@@ -11,7 +12,6 @@ import (
 )
 
 func GetUsers(c echo.Context) error {
-	slog.Info("GETTING USERS!!!")
 	cc := c.(*models.AppContext)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond * 1 * 1000)
 	defer cancel();
@@ -23,18 +23,44 @@ func GetUsers(c echo.Context) error {
 	return c.JSON(http.StatusOK, users)
 }
 
-func GetUser(c echo.Context) error {
-	username := c.Param("username")
-	user, ok := users[username]
-	if !ok {
-		slog.Error("user not found", "username", username)
-		return echo.NewHTTPError(http.StatusNotFound, "user not found")
+func GetUser(c echo.Context, email string) (db.User, error) {
+	cc := c.(*models.AppContext);
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond * 1 * 1000)
+	defer cancel();
+
+	user, err := cc.AppDB.Queries.GetUser(ctx, email);
+	if err != nil {
+		slog.Error("failed to get user", "error", err)
+		return db.User{}, echo.NewHTTPError(http.StatusInternalServerError, "failed to get user")
 	}
-	slog.Info("user found", "username", username)
-	return c.JSON(http.StatusOK, user)
+
+    return user, nil
 }
 
-func SaveUser(user models.User) error {
-	users[user.Username] = user
-	return nil
+func UserExists(c echo.Context, email string) (bool, error) {
+	cc := c.(*models.AppContext);
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond * 1 * 1000)
+	defer cancel();
+
+	exists, err := cc.AppDB.Queries.UserExistsByEmail(ctx, email);
+	if err != nil {
+		slog.Error("failed to check user exists", "error", err)
+		return false, echo.NewHTTPError(http.StatusInternalServerError, "failed to check user exists")
+	}
+
+    return exists, nil
+}
+
+func SaveUser(c echo.Context, params db.CreateUserParams) (db.CreateUserRow, error) {
+	cc := c.(*models.AppContext)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond * 1 * 1000)
+	defer cancel();
+
+	user, err := cc.AppDB.Queries.CreateUser(ctx, params);
+	if err != nil {
+		slog.Error("failed to add user", "error", err)
+		return db.CreateUserRow{}, echo.NewHTTPError(http.StatusInternalServerError, "failed to add user")
+	}
+	return user, nil
 } 

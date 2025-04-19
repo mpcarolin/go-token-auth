@@ -38,6 +38,24 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
+const getUser = `-- name: GetUser :one
+SELECT user_id, email, password, created_at, updated_at FROM users
+WHERE email = $1
+`
+
+func (q *Queries) GetUser(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUser, email)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.Password,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listUsers = `-- name: ListUsers :many
 SELECT user_id, email, password, created_at, updated_at FROM users
 ORDER BY email
@@ -67,4 +85,18 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const userExistsByEmail = `-- name: UserExistsByEmail :one
+SELECT EXISTS (
+    SELECT 1 FROM users
+    WHERE email = $1
+)
+`
+
+func (q *Queries) UserExistsByEmail(ctx context.Context, email string) (bool, error) {
+	row := q.db.QueryRow(ctx, userExistsByEmail, email)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }

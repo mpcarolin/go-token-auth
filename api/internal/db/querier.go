@@ -10,7 +10,9 @@ import (
 
 type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
+	GetUser(ctx context.Context, email string) (User, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	UserExistsByEmail(ctx context.Context, email string) (bool, error)
 }
 
 var _ Querier = (*Queries)(nil)

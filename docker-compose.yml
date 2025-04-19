@@ -3,10 +3,11 @@ services:
     container_name: api
     build:
       context: ./api
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "8080:8080"
     # command: ["tail", "-f", "/dev/null"]
+    command: ["go", "run", "."]
     environment:
       - ENV=development
     env_file:
@@ -22,7 +23,7 @@ services:
       watch:
         - action: rebuild
           path: go.mod
-        - action: rebuild
+        - action: sync+restart
           path: ./api
           ignore: requests/
           target: /app
