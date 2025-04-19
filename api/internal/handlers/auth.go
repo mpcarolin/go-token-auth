@@ -21,7 +21,7 @@ func Login(c echo.Context) error {
 	bindErr := cc.Bind(&loginParams)
 	if bindErr != nil {
 		slog.Error("failed to bind params from body", "error", bindErr)
-		return cc.String(http.StatusBadRequest, "valid user params in body are required");
+		return cc.String(http.StatusBadRequest, "request body must contain valid email and password");
 	}
 
 	validateErr := utils.ValidateLogin(loginParams.Email, loginParams.Password);
@@ -53,8 +53,6 @@ func Login(c echo.Context) error {
 	return c.String(http.StatusOK, "user logged in")
 }
 
-
-
 // Route handler for registering a user, given form values username and password
 func Register(c echo.Context) error {
 	cc := c.(*models.AppContext)
@@ -83,7 +81,9 @@ func Register(c echo.Context) error {
 		return c.String(http.StatusConflict, "email in use")
 	}
 
-	var hashed, err = bcrypt.GenerateFromPassword([]byte(userParams.Password), bcrypt.MinCost)
+	// DefaultCost == decent balance of quick logins, while still computationally intense enough to make certain attacks
+	// (e.g. rainbow tables) too expensive
+	var hashed, err = bcrypt.GenerateFromPassword([]byte(userParams.Password), bcrypt.DefaultCost)
 	if err != nil {
 		slog.Error("failed to hash password", "error", err)
 		return c.String(http.StatusInternalServerError, "invalid password")

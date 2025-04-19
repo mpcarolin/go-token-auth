@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -10,9 +9,9 @@ import (
 // TODO: seems like a bad func, maybe rethink. Or at least badly named.
 // Does this belong here...
 func ValidateLogin(email string, password string) error {
+	// TODO: should validate length, format, password complexity, etc.
 	if email == "" || password == "" {
-		msg := fmt.Sprintf("email and password are required. Found email: %s. Found password: %s", email, password);
-		return echo.NewHTTPError(http.StatusBadRequest, msg)
+		return echo.NewHTTPError(http.StatusBadRequest, "email and password are required")
 	}
 	if len(password) > 72 { // bcrypt max byte size if 72
 		return echo.NewHTTPError(http.StatusBadRequest, "password is too long")
@@ -22,14 +21,15 @@ func ValidateLogin(email string, password string) error {
 
 // Generates cookie for token
 func GenerateCookie(token string) *http.Cookie {
+	authDuration := GetAuthDuration()
 	cookie := http.Cookie{
 		Name:     "token",
 		Value:    token,
 		Path:     "/",
-		MaxAge:   86400, // 1 day
+		MaxAge:   int(authDuration.Seconds()),
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteDefaultMode,
+		SameSite: http.SameSiteStrictMode, // require client to be from same domain, mitigating CSRF
 	}
 	return &cookie
 }

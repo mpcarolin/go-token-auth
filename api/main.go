@@ -28,6 +28,7 @@ func main() {
 	e.Use(echoMiddleware.Logger())
 	e.Use(echoMiddleware.Recover())
 	e.Use(echoMiddleware.RateLimiter(echoMiddleware.NewRateLimiterMemoryStore(20)))
+	e.Use(echoMiddleware.CORSWithConfig(utils.GetCORSConfig()))
 
 	// Routes
 	e.GET("/status", func(c echo.Context) error {
@@ -38,7 +39,7 @@ func main() {
 	e.POST("/register", handlers.Register)
 	e.POST("/login", handlers.Login)
 
-	// using this for testing, in real app probably would not expose this endpoint
+	// using this for testing, in real app probably would not expose this data as an endpoint
 	e.GET("/users", middleware.Authenticate(handlers.GetUsers))
 
 	start(e);
