@@ -10,4 +10,3 @@ dev:
 test:
 	$(MAKE) dbreset
 	cd ./api && go test -v
-	docker compose down
